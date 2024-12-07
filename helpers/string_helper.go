@@ -11,9 +11,9 @@ func CamelCaseToSnakeCase(str string) string {
 	return strings.ToLower(snake)
 }
 
-func GenerateValidationErrorMessage(fieldName, tag string) string {
+func GenerateValidationErrorMessage(fieldName string, tag string) string {
 	errorMessages := map[string]string{
-		"required":  fieldName + " field is required.",
+		"required":  fieldName + " is required.",
 		"numeric":   fieldName + " must be a number.",
 		"omitempty": fieldName + " is optional.",
 	}

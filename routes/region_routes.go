@@ -13,31 +13,31 @@ func RegionRoute(app fiber.Router) {
 	/* Countries */
 	country := region.Group("countries")
 	countryTrash := country.Group("trashs")
-	countryTrash.Get("/", controllers.TrashAllCountries)
-	countryTrash.Put("/:id", controllers.RestoreCountry)
-	countryTrash.Delete("/:id", controllers.DeletePermanentCountry)
+	countryTrash.Get("/", requests.ValidatePagination, controllers.TrashAllCountries)
+	// countryTrash.Put("/:id", controllers.RestoreCountry)
 
 	country.Get("/", requests.ValidatePagination, controllers.AllCountries)
 	country.Get("/export", controllers.ExportCountries)
+	country.Get("/search", controllers.SearchCountries)
 	country.Get("/:id", controllers.CountryById)
-	country.Post("/", controllers.CreateCountry)
+	country.Post("/", requests.ValidateCountry, controllers.CreateCountry)
 	country.Post("/import", controllers.ImportCountries)
-	country.Put("/:id", controllers.UpdateCountry)
+	country.Put("/:id", requests.ValidateCountry, controllers.UpdateCountry)
 	country.Delete("/:id", controllers.DeleteCountry)
 
 	/* Provinces */
 	province := region.Group("provinces")
 	provinceTrash := province.Group("trashs")
-	provinceTrash.Get("/", controllers.TrashAllProvinces)
-	provinceTrash.Put("/:id", controllers.RestoreProvince)
-	provinceTrash.Delete("/:id", controllers.DeletePermanentProvince)
+	provinceTrash.Get("/", requests.ValidatePagination, controllers.TrashAllProvinces)
+	// provinceTrash.Put("/:id", controllers.RestoreProvince)
 
-	province.Get("/", controllers.AllProvinces)
+	province.Get("/", requests.ValidatePagination, controllers.AllProvinces)
 	province.Get("/export", controllers.ExportProvinces)
+	province.Get("/search", controllers.SearchProvinces)
 	province.Get("/:id", controllers.ProvinceById)
-	province.Post("/", controllers.CreateProvince)
+	province.Post("/", requests.ValidateProvince, controllers.CreateProvince)
 	province.Post("/import", controllers.ImportProvinces)
-	province.Put("/:id", controllers.UpdateProvince)
+	province.Put("/:id", requests.ValidateProvince, controllers.UpdateProvince)
 	province.Delete("/:id", controllers.DeleteProvince)
 
 	/* Regencies */
