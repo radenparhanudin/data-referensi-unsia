@@ -72,7 +72,7 @@ func CountryById(c *fiber.Ctx) error {
 		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, country, "Successfully retrieved country data")
+	return handlers.SendSuccess(c, fiber.StatusOK, country, helpers.ResponseMessage("get", true))
 }
 
 func CreateCountry(c *fiber.Ctx) error {
@@ -167,7 +167,7 @@ func TrashAllCountries(c *fiber.Ctx) error {
 			"page":      page,
 			"per_page":  pageSize,
 			"sub_total": len(countries),
-			"total":     models.CountCountries(),
+			"total":     models.TrashCountCountries(),
 		},
 	}
 

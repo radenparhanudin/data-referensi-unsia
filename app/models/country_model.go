@@ -22,6 +22,19 @@ type MstCountry struct {
 	// UpdatedAtString string    `json:"updated_at_string"`
 }
 
+type MstCountryRelation struct {
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	PhoneCode string    `json:"phone_code"`
+}
+
+func CountCountries() int64 {
+	db := config.DB
+	var count int64
+	db.Model(&MstCountry{}).Where("deleted_at IS NULL").Count(&count)
+	return count
+}
+
 func AllCountries(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstCountry, error) {
 	db := config.DB
 	var countries []MstCountry
@@ -45,13 +58,6 @@ func AllCountries(filter string, sortBy string, sortDirection string, page int, 
 	// }
 
 	return countries, nil
-}
-
-func CountCountries() int64 {
-	db := config.DB
-	var count int64
-	db.Model(&MstCountry{}).Count(&count)
-	return count
 }
 
 func ExportCountries(c *fiber.Ctx, outputFile string) error {
@@ -271,6 +277,13 @@ func DeleteCountry(id string) error {
 	}
 
 	return nil
+}
+
+func TrashCountCountries() int64 {
+	db := config.DB
+	var count int64
+	db.Model(&MstCountry{}).Where("deleted_at IS NOT NULL").Count(&count)
+	return count
 }
 
 func TrashAllCountries(filter string, sortBy string, sortDirection string, page int, pageSize int) ([]MstCountry, error) {

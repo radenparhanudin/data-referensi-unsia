@@ -13,14 +13,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func AllVillages(c *fiber.Ctx) error {
+func AllCities(c *fiber.Ctx) error {
 	filter := c.Query("filter", "")
 	sortBy := c.Query("sort_by", "name")
 	sortDirection := c.Query("sort_direction", "asc")
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.AllVillages(filter, sortBy, sortDirection, page, pageSize)
+	countries, err := models.AllCities(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.ResponseMessage("get", false))
 	}
@@ -31,17 +31,17 @@ func AllVillages(c *fiber.Ctx) error {
 			"page":      page,
 			"per_page":  pageSize,
 			"sub_total": len(countries),
-			"total":     models.CountVillages(),
+			"total":     models.CountCities(),
 		},
 	}
 
 	return handlers.SendSuccess(c, fiber.StatusOK, results, helpers.ResponseMessage("get", true))
 }
 
-func ExportVillages(c *fiber.Ctx) error {
-	outputFile := "Villages.xlsx"
+func ExportCities(c *fiber.Ctx) error {
+	outputFile := "Cities.xlsx"
 
-	if err := models.ExportVillages(c, outputFile); err != nil {
+	if err := models.ExportCities(c, outputFile); err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.ResponseMessage("export", false))
 	}
 
@@ -50,14 +50,14 @@ func ExportVillages(c *fiber.Ctx) error {
 	return c.SendFile(outputFile, false)
 }
 
-func SearchVillages(c *fiber.Ctx) error {
+func SearchCities(c *fiber.Ctx) error {
 	filter := c.Query("filter", "")
 	sortBy := c.Query("sort_by", "name")
 	sortDirection := c.Query("sort_direction", "asc")
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.AllVillages(filter, sortBy, sortDirection, page, pageSize)
+	countries, err := models.AllCities(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.ResponseMessage("get", false))
 	}
@@ -65,9 +65,9 @@ func SearchVillages(c *fiber.Ctx) error {
 	return handlers.SendSuccess(c, fiber.StatusOK, countries, helpers.ResponseMessage("get", true))
 }
 
-func VillageById(c *fiber.Ctx) error {
+func CityById(c *fiber.Ctx) error {
 	id := c.Params("id")
-	province, err := models.VillageById(id)
+	province, err := models.CityById(id)
 	if err != nil {
 		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
 	}
@@ -75,14 +75,14 @@ func VillageById(c *fiber.Ctx) error {
 	return handlers.SendSuccess(c, fiber.StatusOK, province, helpers.ResponseMessage("get", true))
 }
 
-func CreateVillage(c *fiber.Ctx) error {
-	var req requests.VillageRequest
+func CreateCity(c *fiber.Ctx) error {
+	var req requests.CityRequest
 
 	if err := c.BodyParser(&req); err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	err := models.CreateVillage(req.DistrictId, req.Name, req.Code)
+	err := models.CreateCity(req.ProvinceId, req.Name, req.Code)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key row") {
 			return handlers.SendFailed(c, fiber.StatusBadRequest, nil, helpers.ResponseMessage("insert", false))
@@ -93,7 +93,7 @@ func CreateVillage(c *fiber.Ctx) error {
 	return handlers.SendSuccess(c, fiber.StatusCreated, nil, helpers.ResponseMessage("insert", true))
 }
 
-func ImportVillages(c *fiber.Ctx) error {
+func ImportCities(c *fiber.Ctx) error {
 	file, err := c.FormFile("file_import")
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
@@ -104,7 +104,7 @@ func ImportVillages(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, helpers.ResponseMessage("save", false))
 	}
 
-	if err := models.ImportVillages(filePath); err != nil {
+	if err := models.ImportCities(filePath); err != nil {
 		if strings.Contains(err.Error(), "duplicate key row") {
 			return handlers.SendFailed(c, fiber.StatusBadRequest, nil, helpers.ResponseMessage("exist"))
 		}
@@ -118,16 +118,16 @@ func ImportVillages(c *fiber.Ctx) error {
 	return handlers.SendSuccess(c, fiber.StatusOK, nil, helpers.ResponseMessage("import", true))
 }
 
-func UpdateVillage(c *fiber.Ctx) error {
+func UpdateCity(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	var req requests.VillageRequest
+	var req requests.CityRequest
 
 	if err := c.BodyParser(&req); err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	err := models.UpdateVillage(id, req.DistrictId, req.Name, req.Code)
+	err := models.UpdateCity(id, req.ProvinceId, req.Name, req.Code)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key row") {
 			return handlers.SendFailed(c, fiber.StatusBadRequest, nil, helpers.ResponseMessage("exist"))
@@ -138,10 +138,10 @@ func UpdateVillage(c *fiber.Ctx) error {
 	return handlers.SendSuccess(c, fiber.StatusCreated, nil, helpers.ResponseMessage("update", true))
 }
 
-func DeleteVillage(c *fiber.Ctx) error {
+func DeleteCity(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	err := models.DeleteVillage(id)
+	err := models.DeleteCity(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
@@ -149,14 +149,14 @@ func DeleteVillage(c *fiber.Ctx) error {
 	return handlers.SendSuccess(c, fiber.StatusCreated, nil, helpers.ResponseMessage("delete", true))
 }
 
-func TrashAllVillages(c *fiber.Ctx) error {
+func TrashAllCities(c *fiber.Ctx) error {
 	filter := c.Query("filter", "")
 	sortBy := c.Query("sort_by", "name")
 	sortDirection := c.Query("sort_direction", "asc")
 	page := c.QueryInt("page", 1)
 	pageSize := c.QueryInt("page_size", 10)
 
-	countries, err := models.TrashAllVillages(filter, sortBy, sortDirection, page, pageSize)
+	countries, err := models.TrashAllCities(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.ResponseMessage("get", false))
 	}
@@ -167,14 +167,14 @@ func TrashAllVillages(c *fiber.Ctx) error {
 			"page":      page,
 			"per_page":  pageSize,
 			"sub_total": len(countries),
-			"total":     models.TrashCountVillages(),
+			"total":     models.TrashCountCities(),
 		},
 	}
 
 	return handlers.SendSuccess(c, fiber.StatusOK, results, helpers.ResponseMessage("get", true))
 }
 
-// func RestoreVillage(c *fiber.Ctx) error {
+// func RestoreCity(c *fiber.Ctx) error {
 // 	id := c.Params("id")
-// 	return c.JSON(fiber.Map{"message": "RestoreVillage", "id": id})
+// 	return c.JSON(fiber.Map{"message": "RestoreCity", "id": id})
 // }

@@ -12,13 +12,27 @@ import (
 )
 
 type MstProvince struct {
-	ID         uuid.UUID `json:"id"`
-	CountryId  string    `json:"country_id"`
-	Name       string    `json:"name"`
-	Code       string    `json:"code"`
-	RegionCode string    `json:"region_code"`
-	CreatedAt  int64     `json:"created_at"`
-	UpdatedAt  int64     `json:"updated_at"`
+	ID         uuid.UUID          `json:"id"`
+	CountryId  string             `json:"country_id"`
+	Country    MstCountryRelation `json:"country"`
+	Name       string             `json:"name"`
+	Code       string             `json:"code"`
+	RegionCode string             `json:"region_code"`
+	CreatedAt  int64              `json:"created_at"`
+	UpdatedAt  int64              `json:"updated_at"`
+}
+
+type MstProvinceRelation struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+	Code string    `json:"code"`
+}
+
+func CountProvinces() int64 {
+	db := config.DB
+	var count int64
+	db.Model(&MstProvince{}).Where("deleted_at IS NULL").Count(&count)
+	return count
 }
 
 func AllProvinces(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstProvince, error) {
@@ -39,13 +53,6 @@ func AllProvinces(filter string, sortBy string, sortDirection string, page int, 
 	}
 
 	return provinces, nil
-}
-
-func CountProvinces() int64 {
-	db := config.DB
-	var count int64
-	db.Model(&MstProvince{}).Count(&count)
-	return count
 }
 
 func ExportProvinces(c *fiber.Ctx, outputFile string) error {
@@ -111,6 +118,19 @@ func ProvinceById(id string) (MstProvince, error) {
 	if result.RowsAffected == 0 {
 		return MstProvince{}, fmt.Errorf("data with id %s not found", id)
 	}
+
+	var country MstCountryRelation
+	countryQuery := `
+		EXEC sp_mst_countries_get_by_id
+		@id = ?
+	`
+	countryResult := db.Raw(countryQuery, province.CountryId).Scan(&country)
+	if countryResult.Error != nil {
+		return MstProvince{}, countryResult.Error
+	}
+
+	province.Country = country
+
 	return province, nil
 }
 
@@ -275,6 +295,12 @@ func DeleteProvince(id string) error {
 	return nil
 }
 
+func TrashCountProvinces() int64 {
+	db := config.DB
+	var count int64
+	db.Model(&MstProvince{}).Where("deleted_at IS NULL").Count(&count)
+	return count
+}
 func TrashAllProvinces(filter string, sortBy string, sortDirection string, page int, pageSize int) ([]MstProvince, error) {
 	db := config.DB
 	var provinces []MstProvince

@@ -72,7 +72,7 @@ func ProvinceById(c *fiber.Ctx) error {
 		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, province, "Successfully retrieved province data")
+	return handlers.SendSuccess(c, fiber.StatusOK, province, helpers.ResponseMessage("get", true))
 }
 
 func CreateProvince(c *fiber.Ctx) error {
@@ -167,7 +167,7 @@ func TrashAllProvinces(c *fiber.Ctx) error {
 			"page":      page,
 			"per_page":  pageSize,
 			"sub_total": len(countries),
-			"total":     models.CountProvinces(),
+			"total":     models.TrashCountProvinces(),
 		},
 	}
 
