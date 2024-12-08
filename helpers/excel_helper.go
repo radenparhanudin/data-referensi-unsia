@@ -6,6 +6,7 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
+/* Auto Size Column Export Excel */
 func ExcelAutoSizeColumn(file *excelize.File, sheetName, col string, numRows int) {
 	var maxLength float64
 	for row := 1; row <= numRows+1; row++ {

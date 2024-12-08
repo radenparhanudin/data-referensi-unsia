@@ -12,13 +12,25 @@ import (
 )
 
 type MstCity struct {
-	ID         uuid.UUID           `json:"id"`
-	ProvinceId string              `json:"province_id"`
-	Province   MstProvinceRelation `json:"province"`
-	Name       string              `json:"name"`
-	Code       string              `json:"code"`
-	CreatedAt  int64               `json:"created_at"`
-	UpdatedAt  int64               `json:"updated_at"`
+	ID         uuid.UUID            `json:"id"`
+	ProvinceId string               `json:"province_id"`
+	Province   *MstProvinceRelation `json:"province"`
+	Name       string               `json:"name"`
+	Code       string               `json:"code"`
+	CreatedAt  int64                `json:"created_at"`
+	UpdatedAt  int64                `json:"updated_at"`
+}
+
+type MstCityExport struct {
+	ID         uuid.UUID `json:"id"`
+	ProvinceId string    `json:"province_id"`
+	Name       string    `json:"name"`
+	Code       string    `json:"code"`
+}
+
+type MstCitySearch struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
 }
 
 type MstCityRelation struct {
@@ -27,35 +39,13 @@ type MstCityRelation struct {
 	Code string    `json:"code"`
 }
 
-func CountCities() int64 {
-	db := config.DB
-	var count int64
-	db.Model(&MstCity{}).Where("deleted_at IS NULL").Count(&count)
-	return count
+/* Action */
+func GetCities(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstCity, error) {
+	return QueryGetCities("sp_mst_cities_get", filter, sortBy, sortDirection, page, pageSize)
 }
 
-func AllCities(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstCity, error) {
-	db := config.DB
-	var cities []MstCity
-
-	query := `
-		EXEC sp_mst_cities_get
-		@Filter = ?, 
-		@SortBy = ?, 
-		@SortDirection = ?, 
-		@Page = ?, 
-		@PageSize = ?
-	`
-	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&cities).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return cities, nil
-}
-
-func ExportCities(c *fiber.Ctx, outputFile string) error {
-	cities, err := AllCities("", "name", "asc", 1, CountCities())
+func ExportCities(c *fiber.Ctx, fileSaveAs string) error {
+	cities, err := QueryExportCities()
 	if err != nil {
 		return fmt.Errorf("failed to get cities: %v", err)
 	}
@@ -92,81 +82,26 @@ func ExportCities(c *fiber.Ctx, outputFile string) error {
 		helpers.ExcelAutoSizeColumn(file, sheetName, col, len(cities))
 	}
 
-	if err := file.SaveAs(outputFile); err != nil {
+	if err := file.SaveAs(fileSaveAs); err != nil {
 		return fmt.Errorf("failed to save XLSX file: %v", err)
 	}
 
 	return nil
 }
 
-func CityById(id string) (MstCity, error) {
-	db := config.DB
-	var city MstCity
-
-	query := `
-		EXEC sp_mst_cities_get_by_id
-		@id = ?
-	`
-	result := db.Raw(query, id).Scan(&city)
-	if result.Error != nil {
-		return MstCity{}, result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return MstCity{}, fmt.Errorf("data with id %s not found", id)
-	}
-
-	var province MstProvinceRelation
-	provinceQuery := `
-		EXEC sp_mst_provinces_get_by_id
-		@id = ?
-	`
-	provinceResult := db.Raw(provinceQuery, city.ProvinceId).Scan(&province)
-	if provinceResult.Error != nil {
-		return MstCity{}, provinceResult.Error
-	}
-
-	city.Province = province
-
-	return city, nil
+func SearchCities(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstCitySearch, error) {
+	return QuerySearchCities("sp_mst_cities_get", filter, sortBy, sortDirection, page, pageSize)
 }
 
-func CreateCity(province_id string, name string, code string) error {
-	db := config.DB
+func GetCity(id string) (MstCity, error) {
+	return QueryGetCity(id)
+}
 
-	now := time.Now()
-	id := uuid.New().String()
-	created_at := now.UnixMilli()
-	updated_at := now.UnixMilli()
-	var created_by, updated_by *string = nil, nil
-
-	query := `
-			EXEC sp_mst_cities_insert
-			@id = ?,
-			@province_id = ?,
-			@name = ?,
-			@code = ?,
-			@created_at = ?,
-			@created_by = ?,
-			@updated_at = ?,
-			@updated_by = ?
-	`
-
-	err := db.Exec(query, id, province_id, name, code, created_at, created_by, updated_at, updated_by).Error
-	if err != nil {
-		return err
-	}
-
-	return nil
+func CreateCity(id string, province_id string, name string, code string) error {
+	return QueryInsertCity(id, province_id, name, code)
 }
 
 func ImportCities(filePath string) error {
-	db := config.DB
-	now := time.Now()
-	created_at := now.UnixMilli()
-	updated_at := now.UnixMilli()
-	var created_by, updated_by *string = nil, nil
-
 	file, err := excelize.OpenFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open excel file: %v", err)
@@ -182,54 +117,45 @@ func ImportCities(filePath string) error {
 		if i == 0 {
 			continue
 		}
-		var id, province_id, name, code *string
+
+		var id string = ""
+		var province_id string = ""
+		var name string = ""
+		var code string = ""
+
 		if len(row) > 0 && row[0] != "" {
-			id = &row[0]
+			id = row[0]
 		}
 		if len(row) > 1 && row[1] != "" {
-			province_id = &row[1]
+			province_id = row[1]
 		}
 		if len(row) > 2 && row[2] != "" {
-			name = &row[2]
+			name = row[2]
 		}
 		if len(row) > 3 && row[3] != "" {
-			code = &row[3]
+			code = row[3]
 		}
 
-		if id != nil {
-			/* Update */
-			query := `
-				EXEC sp_mst_cities_update
-				@id = ?,
-				@province_id = ?,
-				@name = ?,
-				@code = ?,
-				@updated_at = ?,
-				@updated_by = ?
-			`
-
-			err := db.Exec(query, id, province_id, name, code, updated_at, updated_by).Error
+		if id != "" {
+			exist, err := helpers.CheckModelIDExist(id, &MstCity{})
 			if err != nil {
 				return err
 			}
+			if exist {
+				if err := QueryUpdateCity(id, province_id, name, code); err != nil {
+					return err
+				}
+			} else {
+				if err := QueryInsertCity(id, province_id, name, code); err != nil {
+					return err
+				}
+			}
 		} else {
-			/* Insert */
-			id := uuid.New().String()
-			query := `
-					EXEC sp_mst_cities_insert
-					@id = ?,
-					@province_id = ?,
-					@name = ?,
-					@code = ?,
-					@created_at = ?,
-					@created_by = ?,
-					@updated_at = ?,
-					@updated_by = ?
-				`
-
-			err := db.Exec(query, id, province_id, name, code, created_at, created_by, updated_at, updated_by).Error
+			id, err := helpers.EnsureUUID(&MstCity{})
 			if err != nil {
-				print(err.Error())
+				return err
+			}
+			if err := QueryInsertCity(id, province_id, name, code); err != nil {
 				return err
 			}
 		}
@@ -239,6 +165,177 @@ func ImportCities(filePath string) error {
 }
 
 func UpdateCity(id string, province_id string, name string, code string) error {
+	return QueryUpdateCity(id, province_id, name, code)
+}
+
+func DeleteCity(id string) error {
+	if err := QueryDeleteCity(id); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetTrashCities(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstCity, error) {
+	return QueryGetCities("sp_mst_cities_has_deleted", filter, sortBy, sortDirection, page, pageSize)
+}
+
+func RestoreCity(id string) error {
+	if err := QueryRestoreCity(id); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/* Count */
+func CountCities() int64 {
+	return helpers.CountModelSize(&MstCity{}, true)
+}
+
+func CountTrashCities() int64 {
+	return helpers.CountModelSize(&MstCity{}, false)
+}
+
+/* Query */
+func QueryGetCities(sp string, filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstCity, error) {
+	db := config.DB
+	var cities []MstCity
+
+	query := fmt.Sprintf(`
+        EXEC %s 
+        @Filter = ?, 
+        @SortBy = ?, 
+        @SortDirection = ?, 
+        @Page = ?, 
+        @PageSize = ?
+    `, sp)
+
+	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&cities).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range cities {
+		province, err := QueryGetProvinceRelation(cities[i].ProvinceId)
+		if err != nil {
+			return []MstCity{}, err
+		}
+
+		cities[i].Province = &province
+	}
+
+	return cities, nil
+}
+
+func QueryExportCities() ([]MstCityExport, error) {
+	db := config.DB
+	var cities []MstCityExport
+
+	query := `
+        EXEC sp_mst_cities_get 
+        @Filter = ?, 
+        @SortBy = ?, 
+        @SortDirection = ?, 
+        @Page = ?, 
+        @PageSize = ?
+    `
+
+	err := db.Raw(query, "", "name", "asc", 1, CountCities()).Scan(&cities).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return cities, nil
+}
+
+func QuerySearchCities(sp string, filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstCitySearch, error) {
+	db := config.DB
+	var cities []MstCitySearch
+
+	query := fmt.Sprintf(`
+        EXEC %s 
+        @Filter = ?, 
+        @SortBy = ?, 
+        @SortDirection = ?, 
+        @Page = ?, 
+        @PageSize = ?
+    `, sp)
+
+	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&cities).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return cities, nil
+}
+
+func QueryGetCity(id string) (MstCity, error) {
+	db := config.DB
+	var city MstCity
+
+	query := `
+		EXEC sp_mst_cities_get_by_id
+		@id = ?
+	`
+	err := db.Raw(query, id).Scan(&city).Error
+	if err != nil {
+		return MstCity{}, err
+	}
+
+	province, err := QueryGetProvinceRelation(city.ProvinceId)
+	if err != nil {
+		return MstCity{}, err
+	}
+
+	city.Province = &province
+
+	return city, nil
+}
+
+func QueryGetCityRelation(id string) (MstCityRelation, error) {
+	db := config.DB
+	var city MstCityRelation
+
+	query := `
+		EXEC sp_mst_cities_get_by_id
+		@id = ?
+	`
+	result := db.Raw(query, id).Scan(&city)
+	if result.Error != nil {
+		return MstCityRelation{}, result.Error
+	}
+
+	return city, nil
+}
+
+func QueryInsertCity(id string, province_id string, name string, code string) error {
+	db := config.DB
+	now := time.Now()
+	created_at := now.UnixMilli()
+	updated_at := now.UnixMilli()
+	var created_by, updated_by *string = nil, nil
+
+	query := `
+		EXEC sp_mst_cities_insert
+		@id = ?,
+		@province_id = ?,
+		@name = ?,
+		@code = ?,
+		@created_at = ?,
+		@created_by = ?,
+		@updated_at = ?,
+		@updated_by = ?
+	`
+
+	err := db.Exec(query, id, province_id, name, code, created_at, created_by, updated_at, updated_by).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func QueryUpdateCity(id string, province_id string, name string, code string) error {
 	db := config.DB
 
 	now := time.Now()
@@ -246,13 +343,13 @@ func UpdateCity(id string, province_id string, name string, code string) error {
 	var updated_by *string = nil
 
 	query := `
-			EXEC sp_mst_cities_update
-				@id = ?,
-				@province_id = ?,
-				@name = ?,
-				@code = ?,
-				@updated_at = ?,
-				@updated_by = ?
+		EXEC sp_mst_cities_update
+		@id = ?,
+		@province_id = ?,
+		@name = ?,
+		@code = ?,
+		@updated_at = ?,
+		@updated_by = ?
 	`
 
 	err := db.Exec(query, id, province_id, name, code, updated_at, updated_by).Error
@@ -263,7 +360,7 @@ func UpdateCity(id string, province_id string, name string, code string) error {
 	return nil
 }
 
-func DeleteCity(id string) error {
+func QueryDeleteCity(id string) error {
 	db := config.DB
 
 	now := time.Now()
@@ -285,29 +382,17 @@ func DeleteCity(id string) error {
 	return nil
 }
 
-func TrashCountCities() int64 {
+func QueryRestoreCity(id string) error {
 	db := config.DB
-	var count int64
-	db.Model(&MstCity{}).Where("deleted_at IS NOT NULL").Count(&count)
-	return count
-}
-
-func TrashAllCities(filter string, sortBy string, sortDirection string, page int, pageSize int) ([]MstCity, error) {
-	db := config.DB
-	var cities []MstCity
-
 	query := `
-		EXEC sp_mst_cities_has_deleted
-		@Filter = ?, 
-		@SortBy = ?, 
-		@SortDirection = ?, 
-		@Page = ?, 
-		@PageSize = ?
+		EXEC sp_mst_cities_restore
+		@id = ?
 	`
-	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&cities).Error
+
+	err := db.Exec(query, id).Error
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return cities, nil
+	return nil
 }

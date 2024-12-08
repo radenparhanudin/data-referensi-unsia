@@ -30,9 +30,9 @@ func ValidatePagination(c *fiber.Ctx) error {
 		errorMessages := make(map[string]string)
 
 		for _, fieldError := range validationErrors {
-			fieldName := helpers.CamelCaseToSnakeCase(fieldError.Field())
+			fieldName := helpers.ConvertCCToSC(fieldError.Field())
 			tag := fieldError.Tag()
-			errorMessages[fieldName] = helpers.GenerateValidationErrorMessage(fieldName, tag)
+			errorMessages[fieldName] = helpers.GenerateVEM(fieldName, tag)
 		}
 
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{

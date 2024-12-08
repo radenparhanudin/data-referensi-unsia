@@ -13,16 +13,16 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func AllProvinces(c *fiber.Ctx) error {
+func GetProvinces(c *fiber.Ctx) error {
 	filter := c.Query("filter", "")
 	sortBy := c.Query("sort_by", "name")
 	sortDirection := c.Query("sort_direction", "asc")
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.AllProvinces(filter, sortBy, sortDirection, page, pageSize)
+	countries, err := models.GetProvinces(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
-		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.ResponseMessage("get", false))
+		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
@@ -35,19 +35,20 @@ func AllProvinces(c *fiber.Ctx) error {
 		},
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, results, helpers.ResponseMessage("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, results, helpers.GenerateRM("get", true))
 }
 
 func ExportProvinces(c *fiber.Ctx) error {
-	outputFile := "Provinces.xlsx"
+	fileName := "Provinces.xlsx"
+	fileSaveAs := fmt.Sprintf("tmp/exports/%s", fileName)
 
-	if err := models.ExportProvinces(c, outputFile); err != nil {
-		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.ResponseMessage("export", false))
+	if err := models.ExportProvinces(c, fileSaveAs); err != nil {
+		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("export", false))
 	}
 
 	c.Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-	c.Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", outputFile))
-	return c.SendFile(outputFile, false)
+	c.Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
+	return c.SendFile(fileSaveAs, false)
 }
 
 func SearchProvinces(c *fiber.Ctx) error {
@@ -57,22 +58,22 @@ func SearchProvinces(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.AllProvinces(filter, sortBy, sortDirection, page, pageSize)
+	countries, err := models.SearchProvinces(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
-		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.ResponseMessage("get", false))
+		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, countries, helpers.ResponseMessage("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, countries, helpers.GenerateRM("get", true))
 }
 
-func ProvinceById(c *fiber.Ctx) error {
+func GetProvince(c *fiber.Ctx) error {
 	id := c.Params("id")
-	province, err := models.ProvinceById(id)
+	country, err := models.GetProvince(id)
 	if err != nil {
 		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, province, helpers.ResponseMessage("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, country, helpers.GenerateRM("get", true))
 }
 
 func CreateProvince(c *fiber.Ctx) error {
@@ -82,15 +83,26 @@ func CreateProvince(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	err := models.CreateProvince(req.CountryId, req.Name, req.Code, req.RegionCode)
+	/* Check Existing ID */
+	id, err := helpers.EnsureUUID(&models.MstProvince{})
+	if err != nil {
+		return err
+	}
+
+	err = models.CreateProvince(id, req.CountryId, req.Name, req.Code, req.RegionCode)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key row") {
-			return handlers.SendFailed(c, fiber.StatusBadRequest, nil, helpers.ResponseMessage("insert", false))
+			return handlers.SendFailed(c, fiber.StatusBadRequest, nil, helpers.GenerateRM("exist"))
 		}
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, nil, helpers.ResponseMessage("insert", true))
+	country, err := models.GetProvince(id)
+	if err != nil {
+		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
+	}
+
+	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("insert", true))
 }
 
 func ImportProvinces(c *fiber.Ctx) error {
@@ -99,14 +111,14 @@ func ImportProvinces(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	filePath := fmt.Sprintf("./uploads/temp/%s", file.Filename)
+	filePath := fmt.Sprintf("./tmp/uploads/%s", file.Filename)
 	if err := c.SaveFile(file, filePath); err != nil {
-		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, helpers.ResponseMessage("save", false))
+		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, helpers.GenerateRM("save", false))
 	}
 
 	if err := models.ImportProvinces(filePath); err != nil {
 		if strings.Contains(err.Error(), "duplicate key row") {
-			return handlers.SendFailed(c, fiber.StatusBadRequest, nil, helpers.ResponseMessage("exist"))
+			return handlers.SendFailed(c, fiber.StatusBadRequest, nil, helpers.GenerateRM("exist"))
 		}
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
@@ -115,7 +127,7 @@ func ImportProvinces(c *fiber.Ctx) error {
 		log.Println("Error removing uploaded file:", err)
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, nil, helpers.ResponseMessage("import", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, nil, helpers.GenerateRM("import", true))
 }
 
 func UpdateProvince(c *fiber.Ctx) error {
@@ -130,12 +142,17 @@ func UpdateProvince(c *fiber.Ctx) error {
 	err := models.UpdateProvince(id, req.CountryId, req.Name, req.Code, req.RegionCode)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key row") {
-			return handlers.SendFailed(c, fiber.StatusBadRequest, nil, helpers.ResponseMessage("exist"))
+			return handlers.SendFailed(c, fiber.StatusBadRequest, nil, helpers.GenerateRM("exist"))
 		}
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, nil, helpers.ResponseMessage("update", true))
+	country, err := models.GetProvince(id)
+	if err != nil {
+		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
+	}
+
+	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("update", true))
 }
 
 func DeleteProvince(c *fiber.Ctx) error {
@@ -146,19 +163,19 @@ func DeleteProvince(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, nil, helpers.ResponseMessage("delete", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, nil, helpers.GenerateRM("delete", true))
 }
 
-func TrashAllProvinces(c *fiber.Ctx) error {
+func GetTrashProvinces(c *fiber.Ctx) error {
 	filter := c.Query("filter", "")
 	sortBy := c.Query("sort_by", "name")
 	sortDirection := c.Query("sort_direction", "asc")
 	page := c.QueryInt("page", 1)
-	pageSize := c.QueryInt("page_size", 10)
+	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.TrashAllProvinces(filter, sortBy, sortDirection, page, pageSize)
+	countries, err := models.GetTrashProvinces(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
-		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.ResponseMessage("get", false))
+		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
@@ -167,14 +184,20 @@ func TrashAllProvinces(c *fiber.Ctx) error {
 			"page":      page,
 			"per_page":  pageSize,
 			"sub_total": len(countries),
-			"total":     models.TrashCountProvinces(),
+			"total":     models.CountTrashProvinces(),
 		},
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, results, helpers.ResponseMessage("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, results, helpers.GenerateRM("get", true))
 }
 
-// func RestoreProvince(c *fiber.Ctx) error {
-// 	id := c.Params("id")
-// 	return c.JSON(fiber.Map{"message": "RestoreProvince", "id": id})
-// }
+func RestoreProvince(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	err := models.RestoreProvince(id)
+	if err != nil {
+		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
+	}
+
+	return handlers.SendSuccess(c, fiber.StatusCreated, nil, helpers.GenerateRM("restore", true))
+}

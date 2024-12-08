@@ -1,6 +1,33 @@
 package helpers
 
-func ResponseMessage(method string, typeMessage ...bool) string {
+import (
+	"fmt"
+
+	"github.com/google/uuid"
+)
+
+/* Generate UUID */
+func GenerateUUID() string {
+	return uuid.New().String()
+}
+
+/* Generate Validation Error Message */
+func GenerateVEM(fieldName string, tag string) string {
+	errorMessages := map[string]string{
+		"required":  fieldName + " is required.",
+		"numeric":   fieldName + " must be a number.",
+		"max":       fieldName + " exceeds the maximum digit limit.",
+		"omitempty": fieldName + " is optional.",
+	}
+
+	if message, exists := errorMessages[tag]; exists {
+		return message
+	}
+	return fieldName + " is invalid."
+}
+
+/* Generate Response Message */
+func GenerateRM(method string, typeMessage ...bool) string {
 	var messageType bool
 	if len(typeMessage) > 0 {
 		messageType = typeMessage[0]
@@ -37,6 +64,11 @@ func ResponseMessage(method string, typeMessage ...bool) string {
 			return "Data deletion successful"
 		}
 		return "Delete data failed"
+	case "restore":
+		if messageType {
+			return "Data restore successful"
+		}
+		return "Data restore failed"
 	case "exist":
 		return "Data already exists"
 	case "save":
@@ -47,4 +79,8 @@ func ResponseMessage(method string, typeMessage ...bool) string {
 	default:
 		return "Invalid method"
 	}
+}
+
+func GenerateEM(id string) error {
+	return fmt.Errorf("data with id %s not found", id)
 }

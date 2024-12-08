@@ -1,6 +1,7 @@
 package main
 
 import (
+	"data-referensi/app/middlewares"
 	"data-referensi/config"
 	"data-referensi/routes"
 
@@ -11,6 +12,8 @@ func main() {
 	app := fiber.New()
 
 	config.ConnectDB()
+
+	app.Use(middlewares.CleanupMiddleware())
 
 	routes.SetupRouter(app)
 

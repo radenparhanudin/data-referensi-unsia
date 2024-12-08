@@ -12,13 +12,25 @@ import (
 )
 
 type MstVillage struct {
-	ID         uuid.UUID           `json:"id"`
-	DistrictId string              `json:"district_id"`
-	District   MstDistrictRelation `json:"district"`
-	Name       string              `json:"name"`
-	Code       string              `json:"code"`
-	CreatedAt  int64               `json:"created_at"`
-	UpdatedAt  int64               `json:"updated_at"`
+	ID         uuid.UUID            `json:"id"`
+	DistrictId string               `json:"district_id"`
+	District   *MstDistrictRelation `json:"district"`
+	Name       string               `json:"name"`
+	Code       string               `json:"code"`
+	CreatedAt  int64                `json:"created_at"`
+	UpdatedAt  int64                `json:"updated_at"`
+}
+
+type MstVillageExport struct {
+	ID         uuid.UUID `json:"id"`
+	DistrictId string    `json:"district_id"`
+	Name       string    `json:"name"`
+	Code       string    `json:"code"`
+}
+type MstVillageSearch struct {
+	ID   uuid.UUID `json:"id"`
+	Code string    `json:"code"`
+	Name string    `json:"name"`
 }
 
 type MstVillageRelation struct {
@@ -27,35 +39,13 @@ type MstVillageRelation struct {
 	Code string    `json:"code"`
 }
 
-func CountVillages() int64 {
-	db := config.DB
-	var count int64
-	db.Model(&MstVillage{}).Where("deleted_at IS NULL").Count(&count)
-	return count
+/* Action */
+func GetVillages(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstVillage, error) {
+	return QueryGetVillages("sp_mst_villages_get", filter, sortBy, sortDirection, page, pageSize)
 }
 
-func AllVillages(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstVillage, error) {
-	db := config.DB
-	var villages []MstVillage
-
-	query := `
-		EXEC sp_mst_villages_get
-		@Filter = ?, 
-		@SortBy = ?, 
-		@SortDirection = ?, 
-		@Page = ?, 
-		@PageSize = ?
-	`
-	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&villages).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return villages, nil
-}
-
-func ExportVillages(c *fiber.Ctx, outputFile string) error {
-	villages, err := AllVillages("", "name", "asc", 1, CountVillages())
+func ExportVillages(c *fiber.Ctx, fileSaveAs string) error {
+	villages, err := QueryExportVillages()
 	if err != nil {
 		return fmt.Errorf("failed to get villages: %v", err)
 	}
@@ -72,14 +62,14 @@ func ExportVillages(c *fiber.Ctx, outputFile string) error {
 		file.SetCellValue(sheetName, cell, headers[i])
 	}
 
-	for i, city := range villages {
+	for i, district := range villages {
 		row := i + 2
 
 		values := []interface{}{
-			city.ID,
-			city.DistrictId,
-			city.Name,
-			city.Code,
+			district.ID,
+			district.DistrictId,
+			district.Name,
+			district.Code,
 		}
 
 		for i, col := range columns {
@@ -92,81 +82,26 @@ func ExportVillages(c *fiber.Ctx, outputFile string) error {
 		helpers.ExcelAutoSizeColumn(file, sheetName, col, len(villages))
 	}
 
-	if err := file.SaveAs(outputFile); err != nil {
+	if err := file.SaveAs(fileSaveAs); err != nil {
 		return fmt.Errorf("failed to save XLSX file: %v", err)
 	}
 
 	return nil
 }
 
-func VillageById(id string) (MstVillage, error) {
-	db := config.DB
-	var city MstVillage
-
-	query := `
-		EXEC sp_mst_villages_get_by_id
-		@id = ?
-	`
-	result := db.Raw(query, id).Scan(&city)
-	if result.Error != nil {
-		return MstVillage{}, result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return MstVillage{}, fmt.Errorf("data with id %s not found", id)
-	}
-
-	var district MstDistrictRelation
-	districtQuery := `
-		EXEC sp_mst_districts_get_by_id
-		@id = ?
-	`
-	districtResult := db.Raw(districtQuery, city.DistrictId).Scan(&district)
-	if districtResult.Error != nil {
-		return MstVillage{}, districtResult.Error
-	}
-
-	city.District = district
-
-	return city, nil
+func SearchVillages(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstVillageSearch, error) {
+	return QuerySearchVillages("sp_mst_villages_get", filter, sortBy, sortDirection, page, pageSize)
 }
 
-func CreateVillage(district_id string, name string, code string) error {
-	db := config.DB
+func GetVillage(id string) (MstVillage, error) {
+	return QueryGetVillage(id)
+}
 
-	now := time.Now()
-	id := uuid.New().String()
-	created_at := now.UnixMilli()
-	updated_at := now.UnixMilli()
-	var created_by, updated_by *string = nil, nil
-
-	query := `
-			EXEC sp_mst_villages_insert
-			@id = ?,
-			@district_id = ?,
-			@name = ?,
-			@code = ?,
-			@created_at = ?,
-			@created_by = ?,
-			@updated_at = ?,
-			@updated_by = ?
-	`
-
-	err := db.Exec(query, id, district_id, name, code, created_at, created_by, updated_at, updated_by).Error
-	if err != nil {
-		return err
-	}
-
-	return nil
+func CreateVillage(id string, district_id string, name string, code string) error {
+	return QueryInsertVillage(id, district_id, name, code)
 }
 
 func ImportVillages(filePath string) error {
-	db := config.DB
-	now := time.Now()
-	created_at := now.UnixMilli()
-	updated_at := now.UnixMilli()
-	var created_by, updated_by *string = nil, nil
-
 	file, err := excelize.OpenFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open excel file: %v", err)
@@ -182,54 +117,45 @@ func ImportVillages(filePath string) error {
 		if i == 0 {
 			continue
 		}
-		var id, district_id, name, code *string
+
+		var id string = ""
+		var district_id string = ""
+		var name string = ""
+		var code string = ""
+
 		if len(row) > 0 && row[0] != "" {
-			id = &row[0]
+			id = row[0]
 		}
 		if len(row) > 1 && row[1] != "" {
-			district_id = &row[1]
+			district_id = row[1]
 		}
 		if len(row) > 2 && row[2] != "" {
-			name = &row[2]
+			name = row[2]
 		}
 		if len(row) > 3 && row[3] != "" {
-			code = &row[3]
+			code = row[3]
 		}
 
-		if id != nil {
-			/* Update */
-			query := `
-				EXEC sp_mst_villages_update
-				@id = ?,
-				@district_id = ?,
-				@name = ?,
-				@code = ?,
-				@updated_at = ?,
-				@updated_by = ?
-			`
-
-			err := db.Exec(query, id, district_id, name, code, updated_at, updated_by).Error
+		if id != "" {
+			exist, err := helpers.CheckModelIDExist(id, &MstVillage{})
 			if err != nil {
 				return err
 			}
+			if exist {
+				if err := QueryUpdateVillage(id, district_id, name, code); err != nil {
+					return err
+				}
+			} else {
+				if err := QueryInsertVillage(id, district_id, name, code); err != nil {
+					return err
+				}
+			}
 		} else {
-			/* Insert */
-			id := uuid.New().String()
-			query := `
-					EXEC sp_mst_villages_insert
-					@id = ?,
-					@district_id = ?,
-					@name = ?,
-					@code = ?,
-					@created_at = ?,
-					@created_by = ?,
-					@updated_at = ?,
-					@updated_by = ?
-				`
-
-			err := db.Exec(query, id, district_id, name, code, created_at, created_by, updated_at, updated_by).Error
+			id, err := helpers.EnsureUUID(&MstVillage{})
 			if err != nil {
-				print(err.Error())
+				return err
+			}
+			if err := QueryInsertVillage(id, district_id, name, code); err != nil {
 				return err
 			}
 		}
@@ -239,6 +165,177 @@ func ImportVillages(filePath string) error {
 }
 
 func UpdateVillage(id string, district_id string, name string, code string) error {
+	return QueryUpdateVillage(id, district_id, name, code)
+}
+
+func DeleteVillage(id string) error {
+	if err := QueryDeleteVillage(id); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetTrashVillages(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstVillage, error) {
+	return QueryGetVillages("sp_mst_villages_has_deleted", filter, sortBy, sortDirection, page, pageSize)
+}
+
+func RestoreVillage(id string) error {
+	if err := QueryRestoreVillage(id); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/* Count */
+func CountVillages() int64 {
+	return helpers.CountModelSize(&MstVillage{}, true)
+}
+
+func CountTrashVillages() int64 {
+	return helpers.CountModelSize(&MstVillage{}, false)
+}
+
+/* Query */
+func QueryGetVillages(sp string, filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstVillage, error) {
+	db := config.DB
+	var villages []MstVillage
+
+	query := fmt.Sprintf(`
+        EXEC %s 
+        @Filter = ?, 
+        @SortBy = ?, 
+        @SortDirection = ?, 
+        @Page = ?, 
+        @PageSize = ?
+    `, sp)
+
+	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&villages).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range villages {
+		district, err := QueryGetDistrictRelation(villages[i].DistrictId)
+		if err != nil {
+			return []MstVillage{}, err
+		}
+
+		villages[i].District = &district
+	}
+
+	return villages, nil
+}
+
+func QueryExportVillages() ([]MstVillageExport, error) {
+	db := config.DB
+	var villages []MstVillageExport
+
+	query := `
+        EXEC sp_mst_villages_get
+        @Filter = ?, 
+        @SortBy = ?, 
+        @SortDirection = ?, 
+        @Page = ?, 
+        @PageSize = ?
+    `
+
+	err := db.Raw(query, "", "name", "asc", 1, CountVillages()).Scan(&villages).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return villages, nil
+}
+
+func QuerySearchVillages(sp string, filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstVillageSearch, error) {
+	db := config.DB
+	var villages []MstVillageSearch
+
+	query := fmt.Sprintf(`
+        EXEC %s 
+        @Filter = ?, 
+        @SortBy = ?, 
+        @SortDirection = ?, 
+        @Page = ?, 
+        @PageSize = ?
+    `, sp)
+
+	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&villages).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return villages, nil
+}
+
+func QueryGetVillage(id string) (MstVillage, error) {
+	db := config.DB
+	var village MstVillage
+
+	query := `
+		EXEC sp_mst_villages_get_by_id
+		@id = ?
+	`
+	err := db.Raw(query, id).Scan(&village).Error
+	if err != nil {
+		return MstVillage{}, err
+	}
+
+	district, err := QueryGetDistrictRelation(village.DistrictId)
+	if err != nil {
+		return MstVillage{}, err
+	}
+
+	village.District = &district
+
+	return village, nil
+}
+
+func QueryGetVillageRelation(id string) (MstVillageRelation, error) {
+	db := config.DB
+	var district MstVillageRelation
+
+	query := `
+		EXEC sp_mst_villages_get_by_id
+		@id = ?
+	`
+	result := db.Raw(query, id).Scan(&district)
+	if result.Error != nil {
+		return MstVillageRelation{}, result.Error
+	}
+
+	return district, nil
+}
+
+func QueryInsertVillage(id string, district_id string, name string, code string) error {
+	db := config.DB
+	now := time.Now()
+	created_at := now.UnixMilli()
+	updated_at := now.UnixMilli()
+	var created_by, updated_by *string = nil, nil
+
+	query := `
+		EXEC sp_mst_villages_insert
+		@id = ?,
+		@district_id = ?,
+		@name = ?,
+		@code = ?,
+		@created_at = ?,
+		@created_by = ?,
+		@updated_at = ?,
+		@updated_by = ?
+	`
+
+	err := db.Exec(query, id, district_id, name, code, created_at, created_by, updated_at, updated_by).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func QueryUpdateVillage(id string, district_id string, name string, code string) error {
 	db := config.DB
 
 	now := time.Now()
@@ -246,13 +343,13 @@ func UpdateVillage(id string, district_id string, name string, code string) erro
 	var updated_by *string = nil
 
 	query := `
-			EXEC sp_mst_villages_update
-				@id = ?,
-				@district_id = ?,
-				@name = ?,
-				@code = ?,
-				@updated_at = ?,
-				@updated_by = ?
+		EXEC sp_mst_villages_update
+		@id = ?,
+		@district_id = ?,
+		@name = ?,
+		@code = ?,
+		@updated_at = ?,
+		@updated_by = ?
 	`
 
 	err := db.Exec(query, id, district_id, name, code, updated_at, updated_by).Error
@@ -263,7 +360,7 @@ func UpdateVillage(id string, district_id string, name string, code string) erro
 	return nil
 }
 
-func DeleteVillage(id string) error {
+func QueryDeleteVillage(id string) error {
 	db := config.DB
 
 	now := time.Now()
@@ -285,29 +382,17 @@ func DeleteVillage(id string) error {
 	return nil
 }
 
-func TrashCountVillages() int64 {
+func QueryRestoreVillage(id string) error {
 	db := config.DB
-	var count int64
-	db.Model(&MstVillage{}).Where("deleted_at IS NOT NULL").Count(&count)
-	return count
-}
-
-func TrashAllVillages(filter string, sortBy string, sortDirection string, page int, pageSize int) ([]MstVillage, error) {
-	db := config.DB
-	var villages []MstVillage
-
 	query := `
-		EXEC sp_mst_villages_has_deleted
-		@Filter = ?, 
-		@SortBy = ?, 
-		@SortDirection = ?, 
-		@Page = ?, 
-		@PageSize = ?
+		EXEC sp_mst_villages_restore
+		@id = ?
 	`
-	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&villages).Error
+
+	err := db.Exec(query, id).Error
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return villages, nil
+	return nil
 }

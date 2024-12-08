@@ -8,15 +8,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-type CountryRequest struct {
-	Name         string `json:"name" validate:"required,max=255"`
-	PhoneCode    string `json:"phone_code" validate:"required,max=10"`
-	IconFlagPath string `json:"icon_flag_path" validate:"omitempty,max=255"`
+type AlmamaterSizeRequest struct {
+	Code       string `json:"code" validate:"required,max=50"`
+	Size       string `json:"size" validate:"required,max=255"`
+	ChestSize  string `json:"chest_size" validate:"required,max=255"`
+	ArmLength  string `json:"arm_length" validate:"required,max=255"`
+	BodyLength string `json:"body_length" validate:"required,max=255"`
 }
 
-func ValidateCountry(c *fiber.Ctx) error {
+func ValidateAlmamaterSize(c *fiber.Ctx) error {
 	validate := validator.New()
-	var req CountryRequest
+	var req AlmamaterSizeRequest
 	if err := c.BodyParser(&req); err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}

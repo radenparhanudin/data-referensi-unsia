@@ -4,6 +4,7 @@ import (
 	"data-referensi/config"
 	"data-referensi/helpers"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -12,50 +13,41 @@ import (
 )
 
 type MstDistrict struct {
-	ID        uuid.UUID       `json:"id"`
-	CityId    string          `json:"city_id"`
-	City      MstCityRelation `json:"city"`
-	Name      string          `json:"name"`
-	Code      string          `json:"code"`
-	CreatedAt int64           `json:"created_at"`
-	UpdatedAt int64           `json:"updated_at"`
+	ID        uuid.UUID        `json:"id"`
+	CityId    string           `json:"city_id"`
+	City      *MstCityRelation `json:"city"`
+	Name      string           `json:"name"`
+	Code      string           `json:"code"`
+	CreatedAt int64            `json:"created_at"`
+	UpdatedAt int64            `json:"updated_at"`
+}
+
+type MstDistrictExport struct {
+	ID     uuid.UUID `json:"id"`
+	CityId string    `json:"city_id"`
+	Name   string    `json:"name"`
+	Code   string    `json:"code"`
+}
+
+type MstDistrictSearch struct {
+	ID   uuid.UUID `json:"id"`
+	Code string    `json:"code"`
+	Name string    `json:"name"`
 }
 
 type MstDistrictRelation struct {
 	ID   uuid.UUID `json:"id"`
 	Name string    `json:"name"`
+	Code string    `json:"code"`
 }
 
-func CountDistricts() int64 {
-	db := config.DB
-	var count int64
-	db.Model(&MstDistrict{}).Where("deleted_at IS NULL").Count(&count)
-	return count
+/* Action */
+func GetDistricts(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstDistrict, error) {
+	return QueryGetDistricts("sp_mst_districts_get", filter, sortBy, sortDirection, page, pageSize)
 }
 
-func AllDistricts(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstDistrict, error) {
-	db := config.DB
-	var districts []MstDistrict
-
-	query := `
-		EXEC sp_mst_districts_get
-		@Filter = ?, 
-		@SortBy = ?, 
-		@SortDirection = ?, 
-		@Page = ?, 
-		@PageSize = ?
-	`
-
-	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&districts).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return districts, nil
-}
-
-func ExportDistricts(c *fiber.Ctx, outputFile string) error {
-	districts, err := AllDistricts("", "name", "asc", 1, CountDistricts())
+func ExportDistricts(c *fiber.Ctx, fileSaveAs string) error {
+	districts, err := QueryExportDistricts()
 	if err != nil {
 		return fmt.Errorf("failed to get districts: %v", err)
 	}
@@ -93,81 +85,26 @@ func ExportDistricts(c *fiber.Ctx, outputFile string) error {
 		helpers.ExcelAutoSizeColumn(file, sheetName, col, len(districts))
 	}
 
-	if err := file.SaveAs(outputFile); err != nil {
+	if err := file.SaveAs(fileSaveAs); err != nil {
 		return fmt.Errorf("failed to save XLSX file: %v", err)
 	}
 
 	return nil
 }
 
-func DistrictById(id string) (MstDistrict, error) {
-	db := config.DB
-	var district MstDistrict
-
-	query := `
-		EXEC sp_mst_districts_get_by_id
-		@id = ?
-	`
-	result := db.Raw(query, id).Scan(&district)
-	if result.Error != nil {
-		return MstDistrict{}, result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return MstDistrict{}, fmt.Errorf("data with id %s not found", id)
-	}
-
-	var city MstCityRelation
-	cityQuery := `
-		EXEC sp_mst_cities_get_by_id
-		@id = ?
-	`
-	cityResult := db.Raw(cityQuery, district.CityId).Scan(&city)
-	if cityResult.Error != nil {
-		return MstDistrict{}, cityResult.Error
-	}
-
-	district.City = city
-
-	return district, nil
+func SearchDistricts(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstDistrictSearch, error) {
+	return QuerySearchDistricts("sp_mst_districts_get", filter, sortBy, sortDirection, page, pageSize)
 }
 
-func CreateDistrict(city_id string, name string, code string) error {
-	db := config.DB
+func GetDistrict(id string) (MstDistrict, error) {
+	return QueryGetDistrict(id)
+}
 
-	now := time.Now()
-	id := uuid.New().String()
-	created_at := now.UnixMilli()
-	updated_at := now.UnixMilli()
-	var created_by, updated_by *string = nil, nil
-
-	query := `
-			EXEC sp_mst_districts_insert
-			@id = ?,
-			@city_id = ?,
-			@name = ?,
-			@code = ?,
-			@created_at = ?,
-			@created_by = ?,
-			@updated_at = ?,
-			@updated_by = ?
-	`
-
-	err := db.Exec(query, id, city_id, name, code, created_at, created_by, updated_at, updated_by).Error
-	if err != nil {
-		return err
-	}
-
-	return nil
+func CreateDistrict(id string, city_id string, name string, code string) error {
+	return QueryInsertDistrict(id, city_id, name, code)
 }
 
 func ImportDistricts(filePath string) error {
-	db := config.DB
-	now := time.Now()
-	created_at := now.UnixMilli()
-	updated_at := now.UnixMilli()
-	var created_by, updated_by *string = nil, nil
-
 	file, err := excelize.OpenFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open excel file: %v", err)
@@ -183,54 +120,46 @@ func ImportDistricts(filePath string) error {
 		if i == 0 {
 			continue
 		}
-		var id, city_id, name, code *string
+
+		var id string = ""
+		var city_id string = ""
+		var name string = ""
+		var code string = ""
+
 		if len(row) > 0 && row[0] != "" {
-			id = &row[0]
+			id = row[0]
 		}
 		if len(row) > 1 && row[1] != "" {
-			city_id = &row[1]
+			city_id = row[1]
 		}
 		if len(row) > 2 && row[2] != "" {
-			name = &row[2]
+			name = row[2]
 		}
 		if len(row) > 3 && row[3] != "" {
-			code = &row[3]
+			code = row[3]
 		}
-
-		if id != nil {
-			/* Update */
-			query := `
-				EXEC sp_mst_districts_update
-				@id = ?,
-				@city_id = ?,
-				@name = ?,
-				@code = ?,
-				@updated_at = ?,
-				@updated_by = ?
-			`
-
-			err := db.Exec(query, id, city_id, name, code, updated_at, updated_by).Error
+		if id != "" {
+			exist, err := helpers.CheckModelIDExist(id, &MstDistrict{})
 			if err != nil {
 				return err
 			}
+			if exist {
+				log.Print("Update")
+				if err := QueryUpdateDistrict(id, city_id, name, code); err != nil {
+					return err
+				}
+			} else {
+				log.Print("Create Ada")
+				if err := QueryInsertDistrict(id, city_id, name, code); err != nil {
+					return err
+				}
+			}
 		} else {
-			/* Insert */
-			id := uuid.New().String()
-			query := `
-					EXEC sp_mst_districts_insert
-					@id = ?,
-					@city_id = ?,
-					@name = ?,
-					@code = ?,
-					@created_at = ?,
-					@created_by = ?,
-					@updated_at = ?,
-					@updated_by = ?
-				`
-
-			err := db.Exec(query, id, city_id, name, code, created_at, created_by, updated_at, updated_by).Error
+			id, err := helpers.EnsureUUID(&MstDistrict{})
 			if err != nil {
-				print(err.Error())
+				return err
+			}
+			if err := QueryInsertDistrict(id, city_id, name, code); err != nil {
 				return err
 			}
 		}
@@ -240,6 +169,177 @@ func ImportDistricts(filePath string) error {
 }
 
 func UpdateDistrict(id string, city_id string, name string, code string) error {
+	return QueryUpdateDistrict(id, city_id, name, code)
+}
+
+func DeleteDistrict(id string) error {
+	if err := QueryDeleteDistrict(id); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetTrashDistricts(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstDistrict, error) {
+	return QueryGetDistricts("sp_mst_districts_has_deleted", filter, sortBy, sortDirection, page, pageSize)
+}
+
+func RestoreDistrict(id string) error {
+	if err := QueryRestoreDistrict(id); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/* Count */
+func CountDistricts() int64 {
+	return helpers.CountModelSize(&MstDistrict{}, true)
+}
+
+func CountTrashDistricts() int64 {
+	return helpers.CountModelSize(&MstDistrict{}, false)
+}
+
+/* Query */
+func QueryGetDistricts(sp string, filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstDistrict, error) {
+	db := config.DB
+	var districts []MstDistrict
+
+	query := fmt.Sprintf(`
+        EXEC %s 
+        @Filter = ?, 
+        @SortBy = ?, 
+        @SortDirection = ?, 
+        @Page = ?, 
+        @PageSize = ?
+    `, sp)
+
+	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&districts).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range districts {
+		city, err := QueryGetCityRelation(districts[i].CityId)
+		if err != nil {
+			return []MstDistrict{}, err
+		}
+
+		districts[i].City = &city
+	}
+
+	return districts, nil
+}
+
+func QueryExportDistricts() ([]MstDistrictExport, error) {
+	db := config.DB
+	var districts []MstDistrictExport
+
+	query := `
+        EXEC sp_mst_districts_get 
+        @Filter = ?, 
+        @SortBy = ?, 
+        @SortDirection = ?, 
+        @Page = ?, 
+        @PageSize = ?
+    `
+
+	err := db.Raw(query, "", "name", "asc", 1, CountDistricts()).Scan(&districts).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return districts, nil
+}
+
+func QuerySearchDistricts(sp string, filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstDistrictSearch, error) {
+	db := config.DB
+	var districts []MstDistrictSearch
+
+	query := fmt.Sprintf(`
+        EXEC %s 
+        @Filter = ?, 
+        @SortBy = ?, 
+        @SortDirection = ?, 
+        @Page = ?, 
+        @PageSize = ?
+    `, sp)
+
+	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&districts).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return districts, nil
+}
+
+func QueryGetDistrict(id string) (MstDistrict, error) {
+	db := config.DB
+	var district MstDistrict
+
+	query := `
+		EXEC sp_mst_districts_get_by_id
+		@id = ?
+	`
+	err := db.Raw(query, id).Scan(&district).Error
+	if err != nil {
+		return MstDistrict{}, err
+	}
+
+	city, err := QueryGetCityRelation(district.CityId)
+	if err != nil {
+		return MstDistrict{}, err
+	}
+
+	district.City = &city
+
+	return district, nil
+}
+
+func QueryGetDistrictRelation(id string) (MstDistrictRelation, error) {
+	db := config.DB
+	var city MstDistrictRelation
+
+	query := `
+		EXEC sp_mst_districts_get_by_id
+		@id = ?
+	`
+	result := db.Raw(query, id).Scan(&city)
+	if result.Error != nil {
+		return MstDistrictRelation{}, result.Error
+	}
+
+	return city, nil
+}
+
+func QueryInsertDistrict(id string, city_id string, name string, code string) error {
+	db := config.DB
+	now := time.Now()
+	created_at := now.UnixMilli()
+	updated_at := now.UnixMilli()
+	var created_by, updated_by *string = nil, nil
+
+	query := `
+		EXEC sp_mst_districts_insert
+		@id = ?,
+		@city_id = ?,
+		@name = ?,
+		@code = ?,
+		@created_at = ?,
+		@created_by = ?,
+		@updated_at = ?,
+		@updated_by = ?
+	`
+
+	err := db.Exec(query, id, city_id, name, code, created_at, created_by, updated_at, updated_by).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func QueryUpdateDistrict(id string, city_id string, name string, code string) error {
 	db := config.DB
 
 	now := time.Now()
@@ -247,13 +347,13 @@ func UpdateDistrict(id string, city_id string, name string, code string) error {
 	var updated_by *string = nil
 
 	query := `
-			EXEC sp_mst_districts_update
-				@id = ?,
-				@city_id = ?,
-				@name = ?,
-				@code = ?,
-				@updated_at = ?,
-				@updated_by = ?
+		EXEC sp_mst_districts_update
+		@id = ?,
+		@city_id = ?,
+		@name = ?,
+		@code = ?,
+		@updated_at = ?,
+		@updated_by = ?
 	`
 
 	err := db.Exec(query, id, city_id, name, code, updated_at, updated_by).Error
@@ -264,7 +364,7 @@ func UpdateDistrict(id string, city_id string, name string, code string) error {
 	return nil
 }
 
-func DeleteDistrict(id string) error {
+func QueryDeleteDistrict(id string) error {
 	db := config.DB
 
 	now := time.Now()
@@ -286,29 +386,17 @@ func DeleteDistrict(id string) error {
 	return nil
 }
 
-func TrashCountDistricts() int64 {
+func QueryRestoreDistrict(id string) error {
 	db := config.DB
-	var count int64
-	db.Model(&MstDistrict{}).Where("deleted_at IS NOT NULL").Count(&count)
-	return count
-}
-
-func TrashAllDistricts(filter string, sortBy string, sortDirection string, page int, pageSize int) ([]MstDistrict, error) {
-	db := config.DB
-	var districts []MstDistrict
-
 	query := `
-		EXEC sp_mst_districts_has_deleted
-		@Filter = ?, 
-		@SortBy = ?, 
-		@SortDirection = ?, 
-		@Page = ?, 
-		@PageSize = ?
+		EXEC sp_mst_districts_restore
+		@id = ?
 	`
-	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&districts).Error
+
+	err := db.Exec(query, id).Error
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return districts, nil
+	return nil
 }

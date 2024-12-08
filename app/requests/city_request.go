@@ -26,8 +26,8 @@ func ValidateCity(c *fiber.Ctx) error {
 		errorMessages := make(map[string]string)
 
 		for _, fieldError := range validationErrors {
-			fieldName := helpers.CamelCaseToSnakeCase(fieldError.Field())
-			errorMessages[fieldName] = helpers.GenerateValidationErrorMessage(fieldName, fieldError.Tag())
+			fieldName := helpers.ConvertCCToSC(fieldError.Field())
+			errorMessages[fieldName] = helpers.GenerateVEM(fieldName, fieldError.Tag())
 		}
 
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{

@@ -13,14 +13,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func GetCities(c *fiber.Ctx) error {
+func GetReligions(c *fiber.Ctx) error {
 	filter := c.Query("filter", "")
 	sortBy := c.Query("sort_by", "name")
 	sortDirection := c.Query("sort_direction", "asc")
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetCities(filter, sortBy, sortDirection, page, pageSize)
+	countries, err := models.GetReligions(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
@@ -31,18 +31,18 @@ func GetCities(c *fiber.Ctx) error {
 			"page":      page,
 			"per_page":  pageSize,
 			"sub_total": len(countries),
-			"total":     models.CountCities(),
+			"total":     models.CountReligions(),
 		},
 	}
 
 	return handlers.SendSuccess(c, fiber.StatusOK, results, helpers.GenerateRM("get", true))
 }
 
-func ExportCities(c *fiber.Ctx) error {
-	fileName := "Cities.xlsx"
+func ExportReligions(c *fiber.Ctx) error {
+	fileName := "Religions.xlsx"
 	fileSaveAs := fmt.Sprintf("tmp/exports/%s", fileName)
 
-	if err := models.ExportCities(c, fileSaveAs); err != nil {
+	if err := models.ExportReligions(c, fileSaveAs); err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("export", false))
 	}
 
@@ -51,14 +51,14 @@ func ExportCities(c *fiber.Ctx) error {
 	return c.SendFile(fileSaveAs, false)
 }
 
-func SearchCities(c *fiber.Ctx) error {
+func SearchReligions(c *fiber.Ctx) error {
 	filter := c.Query("filter", "")
 	sortBy := c.Query("sort_by", "name")
 	sortDirection := c.Query("sort_direction", "asc")
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.SearchCities(filter, sortBy, sortDirection, page, pageSize)
+	countries, err := models.SearchReligions(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
@@ -66,9 +66,9 @@ func SearchCities(c *fiber.Ctx) error {
 	return handlers.SendSuccess(c, fiber.StatusOK, countries, helpers.GenerateRM("get", true))
 }
 
-func GetCity(c *fiber.Ctx) error {
+func GetReligion(c *fiber.Ctx) error {
 	id := c.Params("id")
-	country, err := models.GetCity(id)
+	country, err := models.GetReligion(id)
 	if err != nil {
 		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
 	}
@@ -76,20 +76,20 @@ func GetCity(c *fiber.Ctx) error {
 	return handlers.SendSuccess(c, fiber.StatusOK, country, helpers.GenerateRM("get", true))
 }
 
-func CreateCity(c *fiber.Ctx) error {
-	var req requests.CityRequest
+func CreateReligion(c *fiber.Ctx) error {
+	var req requests.ReligionRequest
 
 	if err := c.BodyParser(&req); err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
 	/* Check Existing ID */
-	id, err := helpers.EnsureUUID(&models.MstCity{})
+	id, err := helpers.EnsureUUID(&models.MstReligion{})
 	if err != nil {
 		return err
 	}
 
-	err = models.CreateCity(id, req.ProvinceId, req.Name, req.Code)
+	err = models.CreateReligion(id, req.Code, req.Name)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key row") {
 			return handlers.SendFailed(c, fiber.StatusBadRequest, nil, helpers.GenerateRM("exist"))
@@ -97,7 +97,7 @@ func CreateCity(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetCity(id)
+	country, err := models.GetReligion(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
@@ -105,7 +105,7 @@ func CreateCity(c *fiber.Ctx) error {
 	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("insert", true))
 }
 
-func ImportCities(c *fiber.Ctx) error {
+func ImportReligions(c *fiber.Ctx) error {
 	file, err := c.FormFile("file_import")
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
@@ -116,7 +116,7 @@ func ImportCities(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, helpers.GenerateRM("save", false))
 	}
 
-	if err := models.ImportCities(filePath); err != nil {
+	if err := models.ImportReligions(filePath); err != nil {
 		if strings.Contains(err.Error(), "duplicate key row") {
 			return handlers.SendFailed(c, fiber.StatusBadRequest, nil, helpers.GenerateRM("exist"))
 		}
@@ -130,16 +130,16 @@ func ImportCities(c *fiber.Ctx) error {
 	return handlers.SendSuccess(c, fiber.StatusOK, nil, helpers.GenerateRM("import", true))
 }
 
-func UpdateCity(c *fiber.Ctx) error {
+func UpdateReligion(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	var req requests.CityRequest
+	var req requests.ReligionRequest
 
 	if err := c.BodyParser(&req); err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	err := models.UpdateCity(id, req.ProvinceId, req.Name, req.Code)
+	err := models.UpdateReligion(id, req.Code, req.Name)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key row") {
 			return handlers.SendFailed(c, fiber.StatusBadRequest, nil, helpers.GenerateRM("exist"))
@@ -147,7 +147,7 @@ func UpdateCity(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetCity(id)
+	country, err := models.GetReligion(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
@@ -155,10 +155,10 @@ func UpdateCity(c *fiber.Ctx) error {
 	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("update", true))
 }
 
-func DeleteCity(c *fiber.Ctx) error {
+func DeleteReligion(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	err := models.DeleteCity(id)
+	err := models.DeleteReligion(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
@@ -166,14 +166,14 @@ func DeleteCity(c *fiber.Ctx) error {
 	return handlers.SendSuccess(c, fiber.StatusCreated, nil, helpers.GenerateRM("delete", true))
 }
 
-func GetTrashCities(c *fiber.Ctx) error {
+func GetTrashReligions(c *fiber.Ctx) error {
 	filter := c.Query("filter", "")
 	sortBy := c.Query("sort_by", "name")
 	sortDirection := c.Query("sort_direction", "asc")
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetTrashCities(filter, sortBy, sortDirection, page, pageSize)
+	countries, err := models.GetTrashReligions(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
@@ -184,17 +184,17 @@ func GetTrashCities(c *fiber.Ctx) error {
 			"page":      page,
 			"per_page":  pageSize,
 			"sub_total": len(countries),
-			"total":     models.CountTrashCities(),
+			"total":     models.CountTrashReligions(),
 		},
 	}
 
 	return handlers.SendSuccess(c, fiber.StatusOK, results, helpers.GenerateRM("get", true))
 }
 
-func RestoreCity(c *fiber.Ctx) error {
+func RestoreReligion(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	err := models.RestoreCity(id)
+	err := models.RestoreReligion(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
