@@ -20,17 +20,17 @@ func GetJobs(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetJobs(filter, sortBy, sortDirection, page, pageSize)
+	jobs, err := models.GetJobs(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": jobs,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(jobs),
 			"total":     models.CountJobs(),
 		},
 	}
@@ -58,22 +58,22 @@ func SearchJobs(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.SearchJobs(filter, sortBy, sortDirection, page, pageSize)
+	jobs, err := models.SearchJobs(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, countries, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, jobs, helpers.GenerateRM("get", true))
 }
 
 func GetJob(c *fiber.Ctx) error {
 	id := c.Params("id")
-	country, err := models.GetJob(id)
+	job, err := models.GetJob(id)
 	if err != nil {
 		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, country, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, job, helpers.GenerateRM("get", true))
 }
 
 func CreateJob(c *fiber.Ctx) error {
@@ -97,12 +97,12 @@ func CreateJob(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetJob(id)
+	job, err := models.GetJob(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("insert", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, job, helpers.GenerateRM("insert", true))
 }
 
 func ImportJobs(c *fiber.Ctx) error {
@@ -147,12 +147,12 @@ func UpdateJob(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetJob(id)
+	job, err := models.GetJob(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("update", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, job, helpers.GenerateRM("update", true))
 }
 
 func DeleteJob(c *fiber.Ctx) error {
@@ -173,17 +173,17 @@ func GetTrashJobs(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetTrashJobs(filter, sortBy, sortDirection, page, pageSize)
+	jobs, err := models.GetTrashJobs(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": jobs,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(jobs),
 			"total":     models.CountTrashJobs(),
 		},
 	}

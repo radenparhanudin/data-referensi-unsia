@@ -20,17 +20,17 @@ func GetProvinces(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetProvinces(filter, sortBy, sortDirection, page, pageSize)
+	provinces, err := models.GetProvinces(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": provinces,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(provinces),
 			"total":     models.CountProvinces(),
 		},
 	}
@@ -58,22 +58,32 @@ func SearchProvinces(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.SearchProvinces(filter, sortBy, sortDirection, page, pageSize)
+	provinces, err := models.SearchProvinces(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, countries, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, provinces, helpers.GenerateRM("get", true))
 }
 
-func GetProvince(c *fiber.Ctx) error {
-	id := c.Params("id")
-	country, err := models.GetProvince(id)
+func GetProvinceByCountryId(c *fiber.Ctx) error {
+	country_id := c.Params("country_id")
+	provinces, err := models.GetProvinceByCountryId(country_id)
 	if err != nil {
 		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, country, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, provinces, helpers.GenerateRM("get", true))
+}
+
+func GetProvince(c *fiber.Ctx) error {
+	id := c.Params("id")
+	province, err := models.GetProvince(id)
+	if err != nil {
+		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
+	}
+
+	return handlers.SendSuccess(c, fiber.StatusOK, province, helpers.GenerateRM("get", true))
 }
 
 func CreateProvince(c *fiber.Ctx) error {
@@ -97,12 +107,12 @@ func CreateProvince(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetProvince(id)
+	province, err := models.GetProvince(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("insert", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, province, helpers.GenerateRM("insert", true))
 }
 
 func ImportProvinces(c *fiber.Ctx) error {
@@ -147,12 +157,12 @@ func UpdateProvince(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetProvince(id)
+	province, err := models.GetProvince(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("update", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, province, helpers.GenerateRM("update", true))
 }
 
 func DeleteProvince(c *fiber.Ctx) error {
@@ -173,17 +183,17 @@ func GetTrashProvinces(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetTrashProvinces(filter, sortBy, sortDirection, page, pageSize)
+	provinces, err := models.GetTrashProvinces(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": provinces,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(provinces),
 			"total":     models.CountTrashProvinces(),
 		},
 	}

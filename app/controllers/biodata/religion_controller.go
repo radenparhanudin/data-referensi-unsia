@@ -20,17 +20,17 @@ func GetReligions(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetReligions(filter, sortBy, sortDirection, page, pageSize)
+	religions, err := models.GetReligions(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": religions,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(religions),
 			"total":     models.CountReligions(),
 		},
 	}
@@ -58,22 +58,22 @@ func SearchReligions(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.SearchReligions(filter, sortBy, sortDirection, page, pageSize)
+	religions, err := models.SearchReligions(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, countries, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, religions, helpers.GenerateRM("get", true))
 }
 
 func GetReligion(c *fiber.Ctx) error {
 	id := c.Params("id")
-	country, err := models.GetReligion(id)
+	religion, err := models.GetReligion(id)
 	if err != nil {
 		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, country, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, religion, helpers.GenerateRM("get", true))
 }
 
 func CreateReligion(c *fiber.Ctx) error {
@@ -97,12 +97,12 @@ func CreateReligion(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetReligion(id)
+	religion, err := models.GetReligion(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("insert", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, religion, helpers.GenerateRM("insert", true))
 }
 
 func ImportReligions(c *fiber.Ctx) error {
@@ -147,12 +147,12 @@ func UpdateReligion(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetReligion(id)
+	religion, err := models.GetReligion(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("update", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, religion, helpers.GenerateRM("update", true))
 }
 
 func DeleteReligion(c *fiber.Ctx) error {
@@ -173,17 +173,17 @@ func GetTrashReligions(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetTrashReligions(filter, sortBy, sortDirection, page, pageSize)
+	religions, err := models.GetTrashReligions(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": religions,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(religions),
 			"total":     models.CountTrashReligions(),
 		},
 	}

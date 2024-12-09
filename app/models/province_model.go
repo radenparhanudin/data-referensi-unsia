@@ -96,6 +96,10 @@ func SearchProvinces(filter string, sortBy string, sortDirection string, page in
 	return QuerySearchProvinces("sp_mst_provinces_get", filter, sortBy, sortDirection, page, pageSize)
 }
 
+func GetProvinceByCountryId(country_id string) ([]MstProvinceSearch, error) {
+	return QueryGetProvinceByCountryId(country_id)
+}
+
 func GetProvince(id string) (MstProvince, error) {
 	return QueryGetProvince(id)
 }
@@ -272,6 +276,22 @@ func QuerySearchProvinces(sp string, filter string, sortBy string, sortDirection
 	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&provinces).Error
 	if err != nil {
 		return nil, err
+	}
+
+	return provinces, nil
+}
+
+func QueryGetProvinceByCountryId(country_id string) ([]MstProvinceSearch, error) {
+	db := config.DB
+	var provinces []MstProvinceSearch
+
+	query := `
+		EXEC sp_mst_provinces_get_by_country_id
+		@country_id = ?
+	`
+	err := db.Raw(query, country_id).Scan(&provinces).Error
+	if err != nil {
+		return []MstProvinceSearch{}, err
 	}
 
 	return provinces, nil

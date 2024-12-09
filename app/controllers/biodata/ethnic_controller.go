@@ -20,17 +20,17 @@ func GetEthnics(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetEthnics(filter, sortBy, sortDirection, page, pageSize)
+	ethnics, err := models.GetEthnics(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": ethnics,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(ethnics),
 			"total":     models.CountEthnics(),
 		},
 	}
@@ -58,22 +58,22 @@ func SearchEthnics(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.SearchEthnics(filter, sortBy, sortDirection, page, pageSize)
+	ethnics, err := models.SearchEthnics(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, countries, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, ethnics, helpers.GenerateRM("get", true))
 }
 
 func GetEthnic(c *fiber.Ctx) error {
 	id := c.Params("id")
-	country, err := models.GetEthnic(id)
+	ethnic, err := models.GetEthnic(id)
 	if err != nil {
 		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, country, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, ethnic, helpers.GenerateRM("get", true))
 }
 
 func CreateEthnic(c *fiber.Ctx) error {
@@ -97,12 +97,12 @@ func CreateEthnic(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetEthnic(id)
+	ethnic, err := models.GetEthnic(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("insert", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, ethnic, helpers.GenerateRM("insert", true))
 }
 
 func ImportEthnics(c *fiber.Ctx) error {
@@ -147,12 +147,12 @@ func UpdateEthnic(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetEthnic(id)
+	ethnic, err := models.GetEthnic(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("update", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, ethnic, helpers.GenerateRM("update", true))
 }
 
 func DeleteEthnic(c *fiber.Ctx) error {
@@ -173,17 +173,17 @@ func GetTrashEthnics(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetTrashEthnics(filter, sortBy, sortDirection, page, pageSize)
+	ethnics, err := models.GetTrashEthnics(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": ethnics,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(ethnics),
 			"total":     models.CountTrashEthnics(),
 		},
 	}

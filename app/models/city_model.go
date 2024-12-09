@@ -30,6 +30,7 @@ type MstCityExport struct {
 
 type MstCitySearch struct {
 	ID   uuid.UUID `json:"id"`
+	Code string    `json:"code"`
 	Name string    `json:"name"`
 }
 
@@ -91,6 +92,10 @@ func ExportCities(c *fiber.Ctx, fileSaveAs string) error {
 
 func SearchCities(filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstCitySearch, error) {
 	return QuerySearchCities("sp_mst_cities_get", filter, sortBy, sortDirection, page, pageSize)
+}
+
+func GetCityByProvinceId(province_id string) ([]MstCitySearch, error) {
+	return QueryGetCityByProvinceId(province_id)
 }
 
 func GetCity(id string) (MstCity, error) {
@@ -265,6 +270,22 @@ func QuerySearchCities(sp string, filter string, sortBy string, sortDirection st
 	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&cities).Error
 	if err != nil {
 		return nil, err
+	}
+
+	return cities, nil
+}
+
+func QueryGetCityByProvinceId(province_id string) ([]MstCitySearch, error) {
+	db := config.DB
+	var cities []MstCitySearch
+
+	query := `
+		EXEC sp_mst_cities_get_by_province_id
+		@province_id = ?
+	`
+	err := db.Raw(query, province_id).Scan(&cities).Error
+	if err != nil {
+		return []MstCitySearch{}, err
 	}
 
 	return cities, nil

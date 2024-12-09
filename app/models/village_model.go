@@ -93,6 +93,10 @@ func SearchVillages(filter string, sortBy string, sortDirection string, page int
 	return QuerySearchVillages("sp_mst_villages_get", filter, sortBy, sortDirection, page, pageSize)
 }
 
+func GetVillageByDistrictId(district_id string) ([]MstVillageSearch, error) {
+	return QueryGetVillageByDistrictId(district_id)
+}
+
 func GetVillage(id string) (MstVillage, error) {
 	return QueryGetVillage(id)
 }
@@ -268,6 +272,22 @@ func QuerySearchVillages(sp string, filter string, sortBy string, sortDirection 
 	}
 
 	return villages, nil
+}
+
+func QueryGetVillageByDistrictId(district_id string) ([]MstVillageSearch, error) {
+	db := config.DB
+	var village []MstVillageSearch
+
+	query := `
+		EXEC sp_mst_villages_get_by_district_id
+		@district_id = ?
+	`
+	err := db.Raw(query, district_id).Scan(&village).Error
+	if err != nil {
+		return []MstVillageSearch{}, err
+	}
+
+	return village, nil
 }
 
 func QueryGetVillage(id string) (MstVillage, error) {

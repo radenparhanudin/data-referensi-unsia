@@ -20,17 +20,17 @@ func GetVillages(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetVillages(filter, sortBy, sortDirection, page, pageSize)
+	villages, err := models.GetVillages(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": villages,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(villages),
 			"total":     models.CountVillages(),
 		},
 	}
@@ -58,22 +58,32 @@ func SearchVillages(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.SearchVillages(filter, sortBy, sortDirection, page, pageSize)
+	villages, err := models.SearchVillages(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, countries, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, villages, helpers.GenerateRM("get", true))
 }
 
-func GetVillage(c *fiber.Ctx) error {
-	id := c.Params("id")
-	country, err := models.GetVillage(id)
+func GetVillageByDistrictId(c *fiber.Ctx) error {
+	district_id := c.Params("district_id")
+	villages, err := models.GetVillageByDistrictId(district_id)
 	if err != nil {
 		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, country, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, villages, helpers.GenerateRM("get", true))
+}
+
+func GetVillage(c *fiber.Ctx) error {
+	id := c.Params("id")
+	village, err := models.GetVillage(id)
+	if err != nil {
+		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
+	}
+
+	return handlers.SendSuccess(c, fiber.StatusOK, village, helpers.GenerateRM("get", true))
 }
 
 func CreateVillage(c *fiber.Ctx) error {
@@ -97,12 +107,12 @@ func CreateVillage(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetVillage(id)
+	village, err := models.GetVillage(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("insert", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, village, helpers.GenerateRM("insert", true))
 }
 
 func ImportVillages(c *fiber.Ctx) error {
@@ -147,12 +157,12 @@ func UpdateVillage(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetVillage(id)
+	village, err := models.GetVillage(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("update", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, village, helpers.GenerateRM("update", true))
 }
 
 func DeleteVillage(c *fiber.Ctx) error {
@@ -173,17 +183,17 @@ func GetTrashVillages(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetTrashVillages(filter, sortBy, sortDirection, page, pageSize)
+	villages, err := models.GetTrashVillages(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": villages,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(villages),
 			"total":     models.CountTrashVillages(),
 		},
 	}

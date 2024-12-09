@@ -20,17 +20,17 @@ func GetMarriageStatuses(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetMarriageStatuses(filter, sortBy, sortDirection, page, pageSize)
+	marriageStatuses, err := models.GetMarriageStatuses(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": marriageStatuses,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(marriageStatuses),
 			"total":     models.CountMarriageStatuses(),
 		},
 	}
@@ -58,22 +58,22 @@ func SearchMarriageStatuses(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.SearchMarriageStatuses(filter, sortBy, sortDirection, page, pageSize)
+	marriageStatuses, err := models.SearchMarriageStatuses(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, countries, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, marriageStatuses, helpers.GenerateRM("get", true))
 }
 
 func GetMarriageStatus(c *fiber.Ctx) error {
 	id := c.Params("id")
-	country, err := models.GetMarriageStatus(id)
+	marriageStatus, err := models.GetMarriageStatus(id)
 	if err != nil {
 		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, country, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, marriageStatus, helpers.GenerateRM("get", true))
 }
 
 func CreateMarriageStatus(c *fiber.Ctx) error {
@@ -97,12 +97,12 @@ func CreateMarriageStatus(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetMarriageStatus(id)
+	marriageStatus, err := models.GetMarriageStatus(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("insert", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, marriageStatus, helpers.GenerateRM("insert", true))
 }
 
 func ImportMarriageStatuses(c *fiber.Ctx) error {
@@ -147,12 +147,12 @@ func UpdateMarriageStatus(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetMarriageStatus(id)
+	marriageStatus, err := models.GetMarriageStatus(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("update", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, marriageStatus, helpers.GenerateRM("update", true))
 }
 
 func DeleteMarriageStatus(c *fiber.Ctx) error {
@@ -173,17 +173,17 @@ func GetTrashMarriageStatuses(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetTrashMarriageStatuses(filter, sortBy, sortDirection, page, pageSize)
+	marriageStatuses, err := models.GetTrashMarriageStatuses(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": marriageStatuses,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(marriageStatuses),
 			"total":     models.CountTrashMarriageStatuses(),
 		},
 	}

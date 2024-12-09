@@ -20,17 +20,17 @@ func GetBanks(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetBanks(filter, sortBy, sortDirection, page, pageSize)
+	banks, err := models.GetBanks(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": banks,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(banks),
 			"total":     models.CountBanks(),
 		},
 	}
@@ -58,22 +58,22 @@ func SearchBanks(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.SearchBanks(filter, sortBy, sortDirection, page, pageSize)
+	banks, err := models.SearchBanks(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, countries, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, banks, helpers.GenerateRM("get", true))
 }
 
 func GetBank(c *fiber.Ctx) error {
 	id := c.Params("id")
-	country, err := models.GetBank(id)
+	bank, err := models.GetBank(id)
 	if err != nil {
 		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, country, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, bank, helpers.GenerateRM("get", true))
 }
 
 func CreateBank(c *fiber.Ctx) error {
@@ -97,12 +97,12 @@ func CreateBank(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetBank(id)
+	bank, err := models.GetBank(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("insert", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, bank, helpers.GenerateRM("insert", true))
 }
 
 func ImportBanks(c *fiber.Ctx) error {
@@ -147,12 +147,12 @@ func UpdateBank(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetBank(id)
+	bank, err := models.GetBank(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("update", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, bank, helpers.GenerateRM("update", true))
 }
 
 func DeleteBank(c *fiber.Ctx) error {
@@ -173,17 +173,17 @@ func GetTrashBanks(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetTrashBanks(filter, sortBy, sortDirection, page, pageSize)
+	banks, err := models.GetTrashBanks(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": banks,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(banks),
 			"total":     models.CountTrashBanks(),
 		},
 	}

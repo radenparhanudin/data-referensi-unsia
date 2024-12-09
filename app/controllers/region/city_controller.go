@@ -20,17 +20,17 @@ func GetCities(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetCities(filter, sortBy, sortDirection, page, pageSize)
+	cities, err := models.GetCities(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": cities,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(cities),
 			"total":     models.CountCities(),
 		},
 	}
@@ -58,22 +58,32 @@ func SearchCities(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.SearchCities(filter, sortBy, sortDirection, page, pageSize)
+	cities, err := models.SearchCities(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, countries, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, cities, helpers.GenerateRM("get", true))
 }
 
-func GetCity(c *fiber.Ctx) error {
-	id := c.Params("id")
-	country, err := models.GetCity(id)
+func GetCityByProvinceId(c *fiber.Ctx) error {
+	province_id := c.Params("province_id")
+	cities, err := models.GetCityByProvinceId(province_id)
 	if err != nil {
 		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusOK, country, helpers.GenerateRM("get", true))
+	return handlers.SendSuccess(c, fiber.StatusOK, cities, helpers.GenerateRM("get", true))
+}
+
+func GetCity(c *fiber.Ctx) error {
+	id := c.Params("id")
+	city, err := models.GetCity(id)
+	if err != nil {
+		return handlers.SendSuccess(c, fiber.StatusBadRequest, nil, err.Error())
+	}
+
+	return handlers.SendSuccess(c, fiber.StatusOK, city, helpers.GenerateRM("get", true))
 }
 
 func CreateCity(c *fiber.Ctx) error {
@@ -97,12 +107,12 @@ func CreateCity(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetCity(id)
+	city, err := models.GetCity(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("insert", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, city, helpers.GenerateRM("insert", true))
 }
 
 func ImportCities(c *fiber.Ctx) error {
@@ -147,12 +157,12 @@ func UpdateCity(c *fiber.Ctx) error {
 		return handlers.SendFailed(c, fiber.StatusInternalServerError, nil, err.Error())
 	}
 
-	country, err := models.GetCity(id)
+	city, err := models.GetCity(id)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusBadRequest, nil, err.Error())
 	}
 
-	return handlers.SendSuccess(c, fiber.StatusCreated, country, helpers.GenerateRM("update", true))
+	return handlers.SendSuccess(c, fiber.StatusCreated, city, helpers.GenerateRM("update", true))
 }
 
 func DeleteCity(c *fiber.Ctx) error {
@@ -173,17 +183,17 @@ func GetTrashCities(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	pageSize := int64(c.QueryInt("page_size", 10))
 
-	countries, err := models.GetTrashCities(filter, sortBy, sortDirection, page, pageSize)
+	cities, err := models.GetTrashCities(filter, sortBy, sortDirection, page, pageSize)
 	if err != nil {
 		return handlers.SendFailed(c, fiber.StatusOK, nil, helpers.GenerateRM("get", false))
 	}
 
 	results := map[string]interface{}{
-		"data": countries,
+		"data": cities,
 		"metadata": map[string]interface{}{
 			"page":      page,
 			"per_page":  pageSize,
-			"sub_total": len(countries),
+			"sub_total": len(cities),
 			"total":     models.CountTrashCities(),
 		},
 	}

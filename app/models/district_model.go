@@ -96,6 +96,10 @@ func SearchDistricts(filter string, sortBy string, sortDirection string, page in
 	return QuerySearchDistricts("sp_mst_districts_get", filter, sortBy, sortDirection, page, pageSize)
 }
 
+func GetDistrictByCityId(city_id string) ([]MstDistrictSearch, error) {
+	return QueryGetDistrictByCityId(city_id)
+}
+
 func GetDistrict(id string) (MstDistrict, error) {
 	return QueryGetDistrict(id)
 }
@@ -269,6 +273,22 @@ func QuerySearchDistricts(sp string, filter string, sortBy string, sortDirection
 	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&districts).Error
 	if err != nil {
 		return nil, err
+	}
+
+	return districts, nil
+}
+
+func QueryGetDistrictByCityId(city_id string) ([]MstDistrictSearch, error) {
+	db := config.DB
+	var districts []MstDistrictSearch
+
+	query := `
+		EXEC sp_mst_districts_get_by_city_id
+		@city_id = ?
+	`
+	err := db.Raw(query, city_id).Scan(&districts).Error
+	if err != nil {
+		return []MstDistrictSearch{}, err
 	}
 
 	return districts, nil
