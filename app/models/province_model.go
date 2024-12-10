@@ -157,15 +157,16 @@ func ImportProvinces(filePath string) error {
 					return err
 				}
 			} else {
-				id, err := helpers.EnsureUUID(&MstProvince{})
-				if err != nil {
-					return err
-				}
+
 				if err := QueryInsertProvince(id, country_id, name, code, region_code); err != nil {
 					return err
 				}
 			}
 		} else {
+			id, err := helpers.EnsureUUID(&MstProvince{})
+			if err != nil {
+				return err
+			}
 			if err := QueryInsertProvince(id, country_id, name, code, region_code); err != nil {
 				return err
 			}

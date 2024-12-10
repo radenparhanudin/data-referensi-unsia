@@ -4,7 +4,6 @@ import (
 	"data-referensi/config"
 	"data-referensi/helpers"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -148,12 +147,10 @@ func ImportDistricts(filePath string) error {
 				return err
 			}
 			if exist {
-				log.Print("Update")
 				if err := QueryUpdateDistrict(id, city_id, name, code); err != nil {
 					return err
 				}
 			} else {
-				log.Print("Create Ada")
 				if err := QueryInsertDistrict(id, city_id, name, code); err != nil {
 					return err
 				}

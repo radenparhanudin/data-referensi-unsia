@@ -39,9 +39,9 @@ func GetMarriageStatuses(filter string, sortBy string, sortDirection string, pag
 }
 
 func ExportMarriageStatuses(c *fiber.Ctx, fileSaveAs string) error {
-	religions, err := QueryExportMarriageStatuses()
+	marriage_statues, err := QueryExportMarriageStatuses()
 	if err != nil {
-		return fmt.Errorf("failed to get religions: %v", err)
+		return fmt.Errorf("failed to get marriage statues: %v", err)
 	}
 
 	file := excelize.NewFile()
@@ -56,7 +56,7 @@ func ExportMarriageStatuses(c *fiber.Ctx, fileSaveAs string) error {
 		file.SetCellValue(sheetName, cell, headers[i])
 	}
 
-	for i, religion := range religions {
+	for i, religion := range marriage_statues {
 		row := i + 2
 
 		values := []interface{}{
@@ -71,7 +71,7 @@ func ExportMarriageStatuses(c *fiber.Ctx, fileSaveAs string) error {
 	}
 
 	for _, col := range columns {
-		helpers.ExcelAutoSizeColumn(file, sheetName, col, len(religions))
+		helpers.ExcelAutoSizeColumn(file, sheetName, col, len(marriage_statues))
 	}
 
 	if err := file.SaveAs(fileSaveAs); err != nil {
@@ -184,7 +184,7 @@ func CountTrashMarriageStatuses() int64 {
 /* Query */
 func QueryGetMarriageStatuses(sp string, filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstMarriageStatus, error) {
 	db := config.DB
-	var religions []MstMarriageStatus
+	var marriage_statues []MstMarriageStatus
 
 	query := fmt.Sprintf(`
         EXEC %s 
@@ -195,17 +195,17 @@ func QueryGetMarriageStatuses(sp string, filter string, sortBy string, sortDirec
         @PageSize = ?
     `, sp)
 
-	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&religions).Error
+	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&marriage_statues).Error
 	if err != nil {
 		return nil, err
 	}
 
-	return religions, nil
+	return marriage_statues, nil
 }
 
 func QueryExportMarriageStatuses() ([]MstMarriageStatusExport, error) {
 	db := config.DB
-	var religions []MstMarriageStatusExport
+	var marriage_statues []MstMarriageStatusExport
 
 	query := `
         EXEC sp_mst_marriage_statuses_get 
@@ -216,17 +216,17 @@ func QueryExportMarriageStatuses() ([]MstMarriageStatusExport, error) {
         @PageSize = ?
     `
 
-	err := db.Raw(query, "", "name", "asc", 1, CountMarriageStatuses()).Scan(&religions).Error
+	err := db.Raw(query, "", "name", "asc", 1, CountMarriageStatuses()).Scan(&marriage_statues).Error
 	if err != nil {
 		return nil, err
 	}
 
-	return religions, nil
+	return marriage_statues, nil
 }
 
 func QuerySearchMarriageStatuses(sp string, filter string, sortBy string, sortDirection string, page int, pageSize int64) ([]MstMarriageStatusSearch, error) {
 	db := config.DB
-	var religions []MstMarriageStatusSearch
+	var marriage_statues []MstMarriageStatusSearch
 
 	query := fmt.Sprintf(`
         EXEC %s 
@@ -237,12 +237,12 @@ func QuerySearchMarriageStatuses(sp string, filter string, sortBy string, sortDi
         @PageSize = ?
     `, sp)
 
-	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&religions).Error
+	err := db.Raw(query, filter, sortBy, sortDirection, page, pageSize).Scan(&marriage_statues).Error
 	if err != nil {
 		return nil, err
 	}
 
-	return religions, nil
+	return marriage_statues, nil
 }
 
 func QueryGetMarriageStatus(id string) (MstMarriageStatus, error) {
